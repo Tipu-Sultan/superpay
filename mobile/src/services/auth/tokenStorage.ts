@@ -1,26 +1,20 @@
-const KEY = "superpay.session";
+import * as SecureStore from 'expo-secure-store';
+
+const KEY = 'superpay.session';
+
+/** The JWT lives in the platform keystore (Android Keystore), never in plain storage. */
 export const tokenStorage = {
   async get(): Promise<string | null> {
     try {
-      return localStorage.getItem(KEY);
-    } catch (error) {
-      console.error("Token get failed:", error);
+      return await SecureStore.getItemAsync(KEY);
+    } catch {
       return null;
     }
   },
   async set(token: string): Promise<void> {
-    try {
-      localStorage.setItem(KEY, token);
-    } catch (error) {
-      console.error("Token save failed:", error);
-      throw new Error("Unable to save your session.");
-    }
+    await SecureStore.setItemAsync(KEY, token);
   },
   async clear(): Promise<void> {
-    try {
-      localStorage.removeItem(KEY);
-    } catch (error) {
-      console.error("Token clear failed:", error);
-    }
+    await SecureStore.deleteItemAsync(KEY).catch(() => undefined);
   },
 };
