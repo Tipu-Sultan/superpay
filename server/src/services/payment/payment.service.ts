@@ -151,10 +151,10 @@ function scheduleDemoPendingSettlement(userId: string, transactionId: string): v
   setTimeout(() => {
     void (async () => {
       try {
-        const { refreshPendingTransaction } = await import('../transaction.service');
-        const { getWallet } = await import('../wallet.service');
-        const { serializeTransaction } = await import('../transaction.service');
-        const { publishTransactionUpdate } = await import('../notification.service');
+        const { refreshPendingTransaction } = await import('../transaction.service.js');
+        const { getWallet } = await import('../wallet.service.js');
+        const { serializeTransaction } = await import('../transaction.service.js');
+        const { publishTransactionUpdate } = await import('../notification.service.js');
         const txn = await refreshPendingTransaction(userId, transactionId);
         const wallet = await getWallet(userId);
         await publishTransactionUpdate(userId, serializeTransaction(txn), wallet);
@@ -209,9 +209,9 @@ async function settleDemoPeerTransfer(senderUserId: string, senderTxn: Transacti
       completedAt: new Date(),
     });
 
-    const { getWallet } = await import('../wallet.service');
-    const { serializeTransaction } = await import('../transaction.service');
-    const { publishTransactionUpdate } = await import('../notification.service');
+    const { getWallet } = await import('../wallet.service.js');
+    const { serializeTransaction } = await import('../transaction.service.js');
+    const { publishTransactionUpdate } = await import('../notification.service.js');
     await publishTransactionUpdate(String(recipient._id), serializeTransaction(received), await getWallet(recipient._id));
   } catch (error) {
     await debit(recipient._id, senderTxn.amountPaise).catch(() => undefined);
