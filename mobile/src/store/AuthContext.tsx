@@ -3,6 +3,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { authService, type SessionInput } from '@/services/auth/authService';
 import { tokenStorage } from '@/services/auth/tokenStorage';
 import { setAuthToken, setUnauthorizedHandler } from '@/services/api/client';
+import { connectRealtime, disconnectRealtime } from '@/services/realtimeService';
+import type { SessionResponse } from '@/types/api';
 import { isApiError } from '@/services/api/errors';
 import { loadServerUrlOverride } from '@/services/api/serverConfig';
 import { queryKeys } from '@/hooks/queryKeys';
@@ -18,6 +20,7 @@ interface AuthContextValue {
   state: AuthState;
   user: User | null;
   signIn: (input: SessionInput) => Promise<void>;
+  signInWithSession: (session: SessionResponse) => Promise<void>;
   signOut: () => Promise<void>;
   setUser: (user: User) => void;
   /** Re-run the startup check (used by the "Try again" button on the connection error screen). */
@@ -32,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [bootstrapRun, setBootstrapRun] = useState(0);
 
   const clearSession = useCallback(async () => {
+    disconnectRealtime();
     setAuthToken(null);
     await tokenStorage.clear();
     queryClient.clear();
@@ -53,6 +57,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { user, wallet } = await authService.getMe();
         if (cancelled) return;
         queryClient.setQueryData(queryKeys.wallet, wallet);
+        connectRealtime(token, {
+          onNotification: () => {
+            void queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
+            void queryClient.invalidateQueries({ queryKey: queryKeys.unreadNotifications });
+          },
+          onTransaction: (payload) => {
+            queryClient.setQueryData(queryKeys.wallet, payload.wallet);
+            queryClient.setQueryData(queryKeys.transaction(payload.transaction.id), payload.transaction);
+            void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
+          },
+        });
         setState({ status: 'signedIn', user });
       } catch (error) {
         if (cancelled) return;
@@ -80,16 +95,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => setUnauthorizedHandler(null);
   }, [clearSession]);
 
-  const signIn = useCallback(
-    async (input: SessionInput) => {
-      const session = await authService.createSession(input);
+  const signInWithSession = useCallback(
+    async (session: SessionResponse) => {
       await tokenStorage.set(session.token);
       setAuthToken(session.token);
       queryClient.clear();
       queryClient.setQueryData(queryKeys.wallet, session.wallet);
+      connectRealtime(session.token, {
+        onNotification: () => {
+          void queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.unreadNotifications });
+        },
+        onTransaction: (payload) => {
+          queryClient.setQueryData(queryKeys.wallet, payload.wallet);
+          queryClient.setQueryData(queryKeys.transaction(payload.transaction.id), payload.transaction);
+          void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
+        },
+      });
       setState({ status: 'signedIn', user: session.user });
     },
     [queryClient],
+  );
+
+  const signIn = useCallback(
+    async (input: SessionInput) => {
+      await signInWithSession(await authService.createSession(input));
+    },
+    [signInWithSession],
   );
 
   const signOut = useCallback(async () => {
@@ -105,11 +137,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       state,
       user: state.status === 'signedIn' ? state.user : null,
       signIn,
+      signInWithSession,
       signOut,
       setUser,
       retryBootstrap,
     }),
-    [state, signIn, signOut, setUser, retryBootstrap],
+    [state, signIn, signInWithSession, signOut, setUser, retryBootstrap],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

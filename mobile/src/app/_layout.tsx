@@ -76,6 +76,7 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
         <Stack.Screen name="bills/[category]" />
         <Stack.Screen name="transaction/[id]" />
         <Stack.Screen name="edit-profile" />
+        <Stack.Screen name="notifications" />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />

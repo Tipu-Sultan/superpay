@@ -15,3 +15,6 @@ function limiter(windowMs: number, limit: number, message: string) {
 export const apiLimiter = limiter(15 * 60_000, 600, 'Too many requests. Please slow down.');
 export const sessionLimiter = limiter(15 * 60_000, 30, 'Too many sign-in attempts. Try again in a few minutes.');
 export const paymentLimiter = limiter(60_000, 30, 'Too many payment attempts. Wait a minute and try again.');
+
+export const otpLimiter = limiter(10 * 60_000, 5, 'Too many OTP requests. Please wait before requesting another code.');
+export const otpVerifyLimiter = limiter(10 * 60_000, 10, 'Too many OTP attempts. Please request a new code later.');

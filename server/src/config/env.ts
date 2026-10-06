@@ -14,6 +14,10 @@ const schema = z.object({
   CORS_ORIGIN: z.string().default('*'),
   TXN_LIMIT_RUPEES: z.coerce.number().positive().default(100000),
   STARTER_BALANCE_RUPEES: z.coerce.number().nonnegative().default(12540),
+  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_AUTH_TOKEN: z.string().optional(),
+  TWILIO_VERIFY_SERVICE_SID: z.string().optional(),
+  REDIS_URL: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);
@@ -37,4 +41,11 @@ export const env = {
   /** All money is stored in paise (integer) to avoid floating point errors. */
   txnLimitPaise: Math.round(raw.TXN_LIMIT_RUPEES * 100),
   starterBalancePaise: Math.round(raw.STARTER_BALANCE_RUPEES * 100),
+  redisUrl: raw.REDIS_URL,
+  twilio: {
+    enabled: Boolean(raw.TWILIO_ACCOUNT_SID && raw.TWILIO_AUTH_TOKEN && raw.TWILIO_VERIFY_SERVICE_SID),
+    accountSid: raw.TWILIO_ACCOUNT_SID ?? '',
+    authToken: raw.TWILIO_AUTH_TOKEN ?? '',
+    verifyServiceSid: raw.TWILIO_VERIFY_SERVICE_SID ?? '',
+  },
 } as const;

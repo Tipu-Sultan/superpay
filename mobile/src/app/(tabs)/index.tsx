@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { Logo } from '@/components/brand/Logo';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { BalanceCard } from '@/components/home/BalanceCard';
 import { PromoCard } from '@/components/home/PromoCard';
 import { QuickActions } from '@/components/home/QuickActions';
@@ -46,9 +47,12 @@ export default function HomeScreen() {
     <Screen noHeader refreshing={refreshing} onRefresh={refresh} contentStyle={styles.content}>
       <View style={styles.topBar}>
         <Logo />
-        <Pressable accessibilityRole="button" accessibilityLabel="Open profile" onPress={() => router.navigate('/profile')}>
-          <Avatar name={user.name} color={user.avatarColor} size={42} />
-        </Pressable>
+        <View style={styles.actions}>
+          <NotificationBell />
+          <Pressable accessibilityRole="button" accessibilityLabel="Open profile" onPress={() => router.navigate('/profile')}>
+            <Avatar name={user.name} color={user.avatarColor} size={42} />
+          </Pressable>
+        </View>
       </View>
 
       <View>
@@ -106,5 +110,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   content: { gap: spacing.xl, paddingTop: spacing.md },
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   section: { gap: spacing.md },
 });

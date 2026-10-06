@@ -1,20 +1,7 @@
-export type ErrorCode =
-  | 'BAD_REQUEST'
-  | 'VALIDATION_ERROR'
-  | 'UNAUTHORIZED'
-  | 'FORBIDDEN'
-  | 'NOT_FOUND'
-  | 'CONFLICT'
-  | 'LIMIT_EXCEEDED'
-  | 'INSUFFICIENT_BALANCE'
-  | 'RATE_LIMITED'
-  | 'INTERNAL';
-
-/** Operational error that is safe to expose to API clients. */
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
-    public readonly code: ErrorCode,
+    public readonly code: string,
     message: string,
     public readonly details?: unknown,
   ) {
@@ -22,19 +9,35 @@ export class ApiError extends Error {
     this.name = 'ApiError';
   }
 
-  static badRequest(message: string, details?: unknown) {
+  static badRequest(message: string, details?: unknown): ApiError {
     return new ApiError(400, 'BAD_REQUEST', message, details);
   }
-  static validation(message: string, details?: unknown) {
+
+  static validation(message: string, details?: unknown): ApiError {
     return new ApiError(422, 'VALIDATION_ERROR', message, details);
   }
-  static unauthorized(message = 'Please sign in again.') {
+
+  static unauthorized(message = 'Please sign in to continue.'): ApiError {
     return new ApiError(401, 'UNAUTHORIZED', message);
   }
-  static notFound(message = 'Not found.') {
+
+  static forbidden(message = 'You do not have permission to do that.'): ApiError {
+    return new ApiError(403, 'FORBIDDEN', message);
+  }
+
+  static notFound(message = 'The requested resource was not found.'): ApiError {
     return new ApiError(404, 'NOT_FOUND', message);
   }
-  static conflict(message: string) {
+
+  static conflict(message = 'That request conflicts with the current state.'): ApiError {
     return new ApiError(409, 'CONFLICT', message);
+  }
+
+  static rateLimited(message = 'Too many requests. Please try again later.'): ApiError {
+    return new ApiError(429, 'RATE_LIMITED', message);
+  }
+
+  static serviceUnavailable(message = 'This service is temporarily unavailable. Please try again later.'): ApiError {
+    return new ApiError(503, 'SERVICE_UNAVAILABLE', message);
   }
 }

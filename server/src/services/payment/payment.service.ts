@@ -1,4 +1,4 @@
-import { Transaction, type TransactionDoc } from '../../models';
+import { Transaction, User, type TransactionDoc } from '../../models';
 import type { PaymentMethod, TransactionDirection, TransactionType } from '../../models/constants';
 import { env } from '../../config/env';
 import { ApiError } from '../../utils/ApiError';
@@ -6,6 +6,7 @@ import { generateTransactionId } from '../../utils/ids';
 import { MIN_AMOUNT_PAISE, formatINR } from '../../utils/money';
 import { credit, debit, hasSufficientBalance } from '../wallet.service';
 import { getPaymentGateway } from './index';
+import { logger } from '../../utils/logger';
 import type { Counterparty } from './recipientResolver';
 
 export interface PaymentIntent {
@@ -32,7 +33,10 @@ export async function processPayment(intent: PaymentIntent): Promise<Transaction
   // 1) Idempotency: a retry of the same request returns the original result.
   if (intent.idempotencyKey) {
     const existing = await Transaction.findOne({ user: userId, idempotencyKey: intent.idempotencyKey });
-    if (existing) return existing;
+    if (existing) {
+      if (existing.status === 'success' && intent.type === 'sent') await settleDemoPeerTransfer(userId, existing);
+      return existing;
+    }
   }
 
   // 2) Limits.
@@ -83,12 +87,14 @@ export async function processPayment(intent: PaymentIntent): Promise<Transaction
   }
 
   if (result.outcome === 'pending') {
-    return createOrReturnExisting(userId, intent.idempotencyKey, {
+    const txn = await createOrReturnExisting(userId, intent.idempotencyKey, {
       ...base,
       status: 'pending',
       failureReason: result.reason,
       settled: false,
     });
+    scheduleDemoPendingSettlement(userId, String(txn._id));
+    return txn;
   }
 
   // 5) Success: move the money atomically, then record the transaction.
@@ -98,7 +104,9 @@ export async function processPayment(intent: PaymentIntent): Promise<Transaction
   }
 
   try {
-    return await Transaction.create({ ...base, status: 'success', settled: true, completedAt: new Date() });
+    const txn = await Transaction.create({ ...base, status: 'success', settled: true, completedAt: new Date() });
+    if (intent.type === 'sent') await settleDemoPeerTransfer(userId, txn);
+    return txn;
   } catch (error) {
     // Could not record it: undo the money movement so the ledger stays correct.
     if (direction === 'debit') await credit(userId, amountPaise);
@@ -134,4 +142,79 @@ async function returnIfDuplicate(error: unknown, userId: string, key?: string): 
 
 function isDuplicateKeyError(error: unknown): boolean {
   return typeof error === 'object' && error !== null && (error as { code?: number }).code === 11000;
+}
+
+
+function scheduleDemoPendingSettlement(userId: string, transactionId: string): void {
+  if (getPaymentGateway().name !== 'mock') return;
+
+  setTimeout(() => {
+    void (async () => {
+      try {
+        const { refreshPendingTransaction } = await import('../transaction.service');
+        const { getWallet } = await import('../wallet.service');
+        const { serializeTransaction } = await import('../transaction.service');
+        const { publishTransactionUpdate } = await import('../notification.service');
+        const txn = await refreshPendingTransaction(userId, transactionId);
+        const wallet = await getWallet(userId);
+        await publishTransactionUpdate(userId, serializeTransaction(txn), wallet);
+      } catch {
+        // The next status request can still reconcile a pending demo transaction.
+      }
+    })();
+  }, 10_500).unref();
+}
+
+
+async function settleDemoPeerTransfer(senderUserId: string, senderTxn: TransactionDoc): Promise<void> {
+  const mobile = senderTxn.counterparty.mobile;
+  const upiId = senderTxn.counterparty.upiId;
+  if (!mobile && !upiId) return;
+
+  const recipientFilter: Record<string, unknown>[] = [];
+  if (mobile) recipientFilter.push({ mobile });
+  if (upiId) recipientFilter.push({ upiId });
+  if (recipientFilter.length === 0) return;
+
+  const recipient = await User.findOne({
+    _id: { $ne: senderUserId },
+    $or: recipientFilter,
+  });
+  if (!recipient) return;
+
+  const peerKey = `peer:${senderTxn.txnId}`;
+  const existing = await Transaction.findOne({ user: recipient._id, idempotencyKey: peerKey });
+  if (existing) return;
+
+  await credit(recipient._id, senderTxn.amountPaise);
+  try {
+    const received = await Transaction.create({
+      user: recipient._id,
+      txnId: generateTransactionId(),
+      type: 'received',
+      direction: 'credit',
+      amountPaise: senderTxn.amountPaise,
+      counterparty: {
+        name: 'SuperPay user',
+        mobile: senderTxn.counterparty.mobile,
+        upiId: senderTxn.counterparty.upiId,
+      },
+      note: senderTxn.note,
+      paymentMethod: 'wallet',
+      referenceNo: senderTxn.referenceNo,
+      meta: { simulated: true, gateway: 'mock', transferFromUserId: senderUserId, senderTransactionId: senderTxn.txnId },
+      idempotencyKey: peerKey,
+      settled: true,
+      createdAt: new Date(),
+      completedAt: new Date(),
+    });
+
+    const { getWallet } = await import('../wallet.service');
+    const { serializeTransaction } = await import('../transaction.service');
+    const { publishTransactionUpdate } = await import('../notification.service');
+    await publishTransactionUpdate(String(recipient._id), serializeTransaction(received), await getWallet(recipient._id));
+  } catch (error) {
+    await debit(recipient._id, senderTxn.amountPaise).catch(() => undefined);
+    logger.error('Could not record demo recipient transaction', error);
+  }
 }

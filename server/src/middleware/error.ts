@@ -31,6 +31,10 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     status = 422;
     code = 'VALIDATION_ERROR';
     message = Object.values(err.errors)[0]?.message ?? 'Invalid data.';
+  } else if (err instanceof mongoose.Error) {
+    status = 400;
+    code = 'BAD_REQUEST';
+    message = 'We could not process that request. Please check the information and try again.';
   } else if (isMalformedJson(err)) {
     status = 400;
     code = 'BAD_REQUEST';

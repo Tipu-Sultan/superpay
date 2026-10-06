@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { authService, billService, paymentService, transactionService } from '@/services';
+import { authService, billService, notificationService, paymentService, transactionService } from '@/services';
 import { useAuth } from '@/store/AuthContext';
 import { usePaymentFlow } from '@/store/PaymentFlowContext';
 import type { PaymentResponse } from '@/types/api';
@@ -56,6 +56,28 @@ export function useResetDemoData() {
       setUser(user);
       queryClient.setQueryData(queryKeys.wallet, wallet);
       await queryClient.invalidateQueries();
+    },
+  });
+}
+
+export function useMarkNotificationRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => notificationService.markRead(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.unreadNotifications });
+    },
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => notificationService.markAllRead(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.unreadNotifications });
     },
   });
 }

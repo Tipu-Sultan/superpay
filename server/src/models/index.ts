@@ -6,3 +6,5 @@ export { Transaction, type TransactionDoc } from './Transaction';
 export { Biller, type BillerDoc } from './Biller';
 export { RechargePlan, type RechargePlanDoc } from './RechargePlan';
 export { Announcement, type AnnouncementDoc } from './Announcement';
+export { Notification, type NotificationDoc } from './Notification';
+export { OtpChallenge, type OtpChallengeDoc } from './OtpChallenge';

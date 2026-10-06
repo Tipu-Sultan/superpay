@@ -6,3 +6,4 @@ export { contactService } from './contacts/contactService';
 export { rechargeService } from './recharge/rechargeService';
 export { billService } from './bills/billService';
 export { announcementService } from './announcements/announcementService';
+export { notificationService } from './notifications/notificationService';

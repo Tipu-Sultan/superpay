@@ -9,6 +9,7 @@ import { parseOrThrow } from '../utils/parse';
 import { ok } from '../utils/respond';
 import { addMoneySchema, sendMoneySchema } from '../validators/schemas';
 import { userIdOf } from '../middleware/auth';
+import { publishTransactionUpdate } from '../services/notification.service';
 
 export async function sendMoney(req: Request, res: Response) {
   const userId = userIdOf(req);
@@ -27,12 +28,18 @@ export async function sendMoney(req: Request, res: Response) {
     idempotencyKey: body.idempotencyKey,
   });
 
-  ok(res, { transaction: serializeTransaction(txn), wallet: await getWallet(userId) }, 201);
+  const wallet = await getWallet(userId);
+  const transaction = serializeTransaction(txn);
+  await publishTransactionUpdate(userId, transaction, wallet);
+  ok(res, { transaction, wallet }, 201);
 }
 
 export async function addMoneyHandler(req: Request, res: Response) {
   const userId = userIdOf(req);
   const body = parseOrThrow(addMoneySchema, req.body);
   const txn = await addMoney({ userId, ...body });
-  ok(res, { transaction: serializeTransaction(txn), wallet: await getWallet(userId) }, 201);
+  const wallet = await getWallet(userId);
+  const transaction = serializeTransaction(txn);
+  await publishTransactionUpdate(userId, transaction, wallet);
+  ok(res, { transaction, wallet }, 201);
 }

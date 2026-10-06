@@ -6,11 +6,27 @@ import { env } from '../config/env';
 import { MIN_AMOUNT_PAISE } from '../utils/money';
 import { parseOrThrow } from '../utils/parse';
 import { ok } from '../utils/respond';
-import { sessionSchema, updateProfileSchema } from '../validators/schemas';
+import { otpRequestSchema, otpVerifySchema, sessionSchema, updateProfileSchema } from '../validators/schemas';
 import { userIdOf } from '../middleware/auth';
 import { listFundingSources } from '../services/addMoney.service';
+import { requestOtp, verifyOtp } from '../services/otp.service';
+import { ApiError } from '../utils/ApiError';
+
+export async function requestPhoneOtp(req: Request, res: Response) {
+  const body = parseOrThrow(otpRequestSchema, req.body);
+  ok(res, await requestOtp(body));
+}
+
+export async function verifyPhoneOtp(req: Request, res: Response) {
+  const body = parseOrThrow(otpVerifySchema, req.body);
+  const verified = await verifyOtp(body);
+  const session = await createDemoSession(verified);
+  const wallet = await getWallet(session.user.id);
+  ok(res, { ...session, wallet }, session.isNew ? 201 : 200);
+}
 
 export async function createSession(req: Request, res: Response) {
+  if (env.isProduction) throw ApiError.forbidden('Passwordless demo sign-in is disabled. Verify your mobile number with OTP.');
   const body = parseOrThrow(sessionSchema, req.body);
   const session = await createDemoSession(body);
   const wallet = await getWallet(session.user.id);

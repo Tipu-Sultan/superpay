@@ -161,3 +161,18 @@ export interface Announcement {
   ctaRoute?: string;
   tone: 'brand' | 'accent' | 'info';
 }
+
+
+export interface Notification {
+  id: string;
+  type: 'transaction' | 'system' | 'security';
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+  readAt?: string;
+  createdAt: string;
+}
+
+export interface UnreadNotificationCount {
+  count: number;
+}

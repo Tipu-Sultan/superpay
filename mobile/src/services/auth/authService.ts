@@ -1,6 +1,12 @@
 import { api } from '@/services/api/client';
 import type { SessionResponse, User, Wallet } from '@/types/api';
 
+export interface OtpRequestResponse {
+  expiresInSeconds: number;
+  demo: boolean;
+  devCode?: string;
+}
+
 export interface SessionInput {
   name: string;
   mobile: string;
@@ -8,7 +14,11 @@ export interface SessionInput {
 }
 
 export const authService = {
-  /** Prototype sign-in: no OTP / PIN / password. Replace with a real identity provider later. */
+  requestOtp: (input: SessionInput) => api.post<OtpRequestResponse>('/auth/otp/request', input, { auth: false }),
+
+  verifyOtp: (input: { mobile: string; code: string }) =>
+    api.post<SessionResponse>('/auth/otp/verify', input, { auth: false }),
+
   createSession: (input: SessionInput) => api.post<SessionResponse>('/auth/session', input, { auth: false }),
 
   getMe: () => api.get<{ user: User; wallet: Wallet }>('/me'),

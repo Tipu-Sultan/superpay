@@ -16,7 +16,6 @@
     "test": "tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {
-    "@types/node": "^22.20.5",
     "cors": "^2.8.6",
     "dotenv": "^18.0.5",
     "express": "^5.2.1",
@@ -25,13 +24,17 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.10.4",
     "morgan": "^1.12.1",
-    "zod": "^4.6.5"
+    "zod": "^4.6.5",
+    "socket.io": "^4.8.1",
+    "redis": "^5.8.2",
+    "@socket.io/redis-adapter": "^8.3.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/morgan": "^1.9.10",
+    "@types/node": "^22.20.5",
     "tsx": "^4.23.15",
     "typescript": "~6.0.3"
   }

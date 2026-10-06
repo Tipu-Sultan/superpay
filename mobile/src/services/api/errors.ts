@@ -10,6 +10,7 @@ export type ApiErrorCode =
   | 'INSUFFICIENT_BALANCE'
   | 'RATE_LIMITED'
   | 'INTERNAL'
+  | 'SERVICE_UNAVAILABLE'
   | 'UNKNOWN';
 
 export class ApiError extends Error {
@@ -33,6 +34,10 @@ export const isApiError = (error: unknown): error is ApiError => error instanceo
 /** Safe, human readable text for any thrown value. */
 export function errorMessage(error: unknown, fallback = 'Something went wrong. Please try again.'): string {
   if (isApiError(error)) return error.message;
-  if (error instanceof Error && error.message) return error.message;
+  if (error instanceof Error && error.message && !looksInternal(error.message)) return error.message;
   return fallback;
+}
+
+function looksInternal(message: string): boolean {
+  return /mongodb|mongoose|schema|validation failed|duplicate key|e11000|sql|stack trace|node_modules|cast to objectid/i.test(message);
 }

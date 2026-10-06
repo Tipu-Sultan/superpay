@@ -13,5 +13,7 @@ export const queryKeys = {
   rechargePlans: (operatorId: string, category?: PlanCategory) => ['recharge', 'plans', operatorId, category ?? 'all'] as const,
   billCategories: ['bills', 'categories'] as const,
   billers: (category: BillCategoryId) => ['bills', 'billers', category] as const,
+  notifications: ['notifications'] as const,
+  unreadNotifications: ['notifications', 'unread-count'] as const,
   announcements: ['announcements'] as const,
 };

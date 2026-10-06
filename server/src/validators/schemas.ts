@@ -5,6 +5,19 @@ const idempotencyKey = z.string().min(8).max(80).regex(/^[A-Za-z0-9_-]+$/).optio
 const amountPaise = z.number().int('Amount must be a whole number of paise').positive('Enter an amount greater than zero');
 const note = z.string().trim().max(140, 'Note can be at most 140 characters').optional();
 
+export const otpRequestSchema = z.object({
+  name: z.string().trim().min(2, 'Enter your name').max(60),
+  mobile: z.string().trim().min(10, 'Enter a valid 10 digit mobile number').max(16),
+  email: z.union([z.literal(''), z.string().trim().email('Enter a valid email address')]).optional(),
+});
+
+export const otpVerifySchema = z.object({
+  mobile: z.string().trim().min(10, 'Enter a valid 10 digit mobile number').max(16),
+  code: z.string().regex(/^\d{6}$/, 'Enter the 6 digit OTP.'),
+});
+
+export const notificationIdSchema = z.object({ id: z.string().min(1) });
+
 export const sessionSchema = z.object({
   name: z.string().trim().min(2, 'Enter your name').max(60),
   mobile: z.string().trim().min(10, 'Enter a valid 10 digit mobile number').max(16),

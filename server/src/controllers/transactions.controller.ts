@@ -10,6 +10,7 @@ import { parseOrThrow } from '../utils/parse';
 import { ok } from '../utils/respond';
 import { transactionsQuerySchema } from '../validators/schemas';
 import { userIdOf } from '../middleware/auth';
+import { publishTransactionUpdate } from '../services/notification.service';
 
 export async function listTransactionsHandler(req: Request, res: Response) {
   const userId = userIdOf(req);
@@ -25,5 +26,8 @@ export async function getTransactionHandler(req: Request, res: Response) {
 export async function refreshTransactionHandler(req: Request, res: Response) {
   const userId = userIdOf(req);
   const txn = await refreshPendingTransaction(userId, String(req.params.id));
-  ok(res, { transaction: serializeTransaction(txn), wallet: await getWallet(userId) });
+  const wallet = await getWallet(userId);
+  const transaction = serializeTransaction(txn);
+  await publishTransactionUpdate(userId, transaction, wallet);
+  ok(res, { transaction, wallet });
 }

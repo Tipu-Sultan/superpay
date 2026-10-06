@@ -7,6 +7,7 @@ import {
   rechargeService,
   transactionService,
   walletService,
+  notificationService,
 } from '@/services';
 import { DEFAULT_MAX_AMOUNT_PAISE, DEFAULT_MIN_AMOUNT_PAISE } from '@/config/constants';
 import type { BillCategoryId, PlanCategory, TransactionFilters } from '@/types/api';
@@ -81,3 +82,9 @@ export const useBillers = (category: BillCategoryId) =>
 
 export const useAnnouncements = () =>
   useQuery({ queryKey: queryKeys.announcements, queryFn: () => announcementService.list(), staleTime: 5 * 60_000 });
+
+export const useNotifications = () =>
+  useQuery({ queryKey: queryKeys.notifications, queryFn: () => notificationService.list(), staleTime: 30_000 });
+
+export const useUnreadNotifications = () =>
+  useQuery({ queryKey: queryKeys.unreadNotifications, queryFn: () => notificationService.unreadCount(), staleTime: 10_000 });

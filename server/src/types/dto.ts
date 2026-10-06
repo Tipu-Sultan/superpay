@@ -41,3 +41,14 @@ export interface WalletDTO {
   balancePaise: number;
   currency: 'INR';
 }
+
+
+export interface NotificationDTO {
+  id: string;
+  type: 'transaction' | 'system' | 'security';
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+  readAt?: string;
+  createdAt: string;
+}
